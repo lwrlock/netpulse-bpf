@@ -31,16 +31,6 @@ headerbar, AdwHeaderBar {
     color: #eef2ff;
     min-height: 42px;
 }
-windowcontrols button {
-    min-width: 18px;
-    min-height: 18px;
-    padding: 2px;
-    margin: 0 2px;
-    border-radius: 9999px;
-}
-windowcontrols button image {
-    -gtk-icon-size: 12px;
-}
 .pipe-wrap {
     background: #0b0f22;
     border: 1px solid rgba(129, 140, 248, 0.25);
