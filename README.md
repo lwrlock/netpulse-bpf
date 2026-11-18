@@ -1,52 +1,28 @@
-# NetPulse BPF
+# netpulse-bpf
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-indigo.svg)](LICENSE)
-[![Engine: eBPF sock_ops + C](https://img.shields.io/badge/Engine-eBPF%20%2B%20TCP%20BBR-818cf8.svg)](#architecture)
-[![UI: GTK4 Indigo-Gold](https://img.shields.io/badge/UI-GTK4%20%2B%20Cairo-fbbf24.svg)](#gallery)
-[![Suite: FF Systems](https://img.shields.io/badge/Suite-FF%20Linux%20Systems-6366f1.svg)](https://github.com/lwrlock/ff-power-manager)
+Linux interface throughput, TCP congestion settings, and process socket monitor in C, eBPF, and Python/GTK4.
 
-**Real-time Linux TCP BBR / `fq` qdisc congestion telemetry, `/proc/net/snmp` retransmit analytics, per-process socket descriptor profiling, and eBPF `sock_ops` RTT hooks in C and Python/GTK4.**
+![netpulse-bpf screenshot](docs/screenshots/overview.png)
 
-<p align="center">
-  <img src="docs/screenshots/showcase.gif" alt="NetPulse BPF Telemetry" width="900"/>
-</p>
+## How it works
 
-## Architecture
-
-```mermaid
-flowchart LR
-  SOCK["eBPF sock_ops RTT / Retransmit Hook"] -->|clang -target bpf| BPF["sock_rtt.bpf.o"]
-  NET["/sys/class/net/*/statistics + /proc/net/snmp"] --> C["netpulse-probe Native C Engine"]
-  BPF --> C
-  C -->|RX/TX KB/s & BBR Status| UI["GTK4 Indigo-Gold Throughput HUD"]
-```
-
-## Highlights
-
-- **eBPF `sock_ops` RTT Hook:** Compiles `bpf/sock_rtt.bpf.c` directly to eBPF ELF bytecode tracking smoothed RTT and retransmit callbacks.
-- **TCP BBR & Qdisc Verification:** Reads kernel `tcp_congestion_control`, `default_qdisc`, SNMP retransmit ratios, and active interface RX/TX rates.
-- **Process Socket Blame:** Ranks processes by active `socket:[*]` file descriptors cleanly without exposing private IPs.
-
-<details>
-<summary><b>Full-Resolution UI Screenshot</b></summary>
-
-<p align="center">
-  <img src="docs/screenshots/overview.png" alt="NetPulse BPF Overview" width="880"/>
-</p>
-
-</details>
+- **`netpulse-probe` (`src/native/net_probe.c`):** Runs unprivileged in C, sampling `/sys/class/net/<iface>/statistics/{rx_bytes,tx_bytes,rx_dropped}` over `--sample-ms`, reading `tcp_congestion_control` and `default_qdisc`, parsing TCP segment/retransmit counters from `/proc/net/snmp`, and counting `socket:[*]` file descriptors per PID.
+- **`bpf/sock_rtt.bpf.c`:** Compiled with `clang -target bpf` to `bpf/sock_rtt.bpf.o`, defining a `sock_ops` hook (`BPF_SOCK_OPS_RTT_CB`, `BPF_SOCK_OPS_RETRANS_CB`) that records RTT sums and retransmit counts into a BPF array map.
+- **`src/netpulse/`:** Evaluates link state (`LOW_LATENCY_OPTIMAL`, `ELEVATED_RETRANS`, `CONGESTED`) and renders the GTK4/Cairo graphs.
 
 ## Build & Run
 
 ```bash
+make all
 make test
-./netpulse-probe --json
+./netpulse-probe --sample-ms 80 --json
 PYTHONPATH=src /usr/bin/python3 -m netpulse.gui
 ```
 
----
+## Related
 
-### FF Linux Kernel & Systems Suite
-[FF Power Manager](https://github.com/lwrlock/ff-power-manager) · [eBPF Latency Guard](https://github.com/lwrlock/ebpf-latency-guard) · [VRAM Atlas](https://github.com/lwrlock/vram-atlas) · [Waylens Privacy](https://github.com/lwrlock/waylens-privacy) · [MemPulse](https://github.com/lwrlock/mempulse) · **NetPulse BPF** · [NVMe Sentinel](https://github.com/lwrlock/nvme-sentinel)
+[ff-power-manager](https://github.com/lwrlock/ff-power-manager) · [ebpf-latency-guard](https://github.com/lwrlock/ebpf-latency-guard) · [vram-atlas](https://github.com/lwrlock/vram-atlas) · [waylens-privacy](https://github.com/lwrlock/waylens-privacy) · [mempulse](https://github.com/lwrlock/mempulse) · [nvme-sentinel](https://github.com/lwrlock/nvme-sentinel)
 
-MIT License — Copyright (c) 2026 Furkan (**lwrlock**). Built with assistance from Google DeepMind Antigravity.
+## License
+
+MIT — see [LICENSE](LICENSE).
